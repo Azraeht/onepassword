@@ -16,90 +16,22 @@ const mockItemResponse = `
   "itemVersion": 2,
   "vaultUuid": "test-vault",
   "details": {
-    "fields": [],
-    "notesPlain": "",
-    "sections": [
+    "fields": [
       {
-        "fields": [
-          {
-            "k": "menu",
-            "n": "database_type",
-            "t": "type",
-            "v": "postgresql"
-          },
-          {
-            "inputTraits": {
-              "keyboard": "URL"
-            },
-            "k": "string",
-            "n": "hostname",
-            "t": "server",
-            "v": "redshift.company.io"
-          },
-          {
-            "inputTraits": {
-              "keyboard": "NumberPad"
-            },
-            "k": "string",
-            "n": "port",
-            "t": "port",
-            "v": "5439"
-          },
-          {
-            "inputTraits": {
-              "autocapitalization": "none",
-              "autocorrection": "no"
-            },
-            "k": "string",
-            "n": "database",
-            "t": "database",
-            "v": "test-db"
-          },
-          {
-            "inputTraits": {
-              "autocapitalization": "none",
-              "autocorrection": "no"
-            },
-            "k": "string",
-            "n": "username",
-            "t": "username",
-            "v": "test-user"
-          },
-          {
-            "k": "concealed",
-            "n": "password",
-            "t": "password",
-            "v": "test-password"
-          },
-          {
-            "k": "string",
-            "n": "sid",
-            "t": "SID",
-            "v": ""
-          },
-          {
-            "k": "string",
-            "n": "alias",
-            "t": "alias",
-            "v": ""
-          },
-          {
-            "k": "string",
-            "n": "options",
-            "t": "connection options",
-            "v": ""
-          },
-          {
-            "k": "string",
-            "n": "custom",
-            "t": "schema",
-            "v": "development"
-          }
-        ],
-        "name": "",
-        "title": "Terraform"
+        "designation": "username",
+        "name": "username",
+        "type": "T",
+        "value": "root"
+      },
+      {
+        "designation": "password",
+        "name": "password",
+        "type": "P",
+        "value": "rootpassword"
       }
-    ]
+    ],
+    "notesPlain": "",
+    "sections": []
   },
   "overview": {
     "URLs": [],
@@ -114,25 +46,38 @@ const mockItemResponse = `
 }
 `
 
-var expectedItemMap = ItemMap{
-	SectionName("Terraform"): FieldMap{
-		FieldName("type"):               FieldValue("postgresql"),
-		FieldName("server"):             FieldValue("redshift.company.io"),
-		FieldName("port"):               FieldValue("5439"),
-		FieldName("database"):           FieldValue("test-db"),
-		FieldName("username"):           FieldValue("test-user"),
-		FieldName("password"):           FieldValue("test-password"),
-		FieldName("SID"):                FieldValue(""),
-		FieldName("alias"):              FieldValue(""),
-		FieldName("connection options"): FieldValue(""),
-		FieldName("schema"):             FieldValue("development"),
+var fields = []Field{
+	Field{
+		Designation: "username",
+		Name:        "username",
+		Value:       "root",
+		Type:        "T",
+	},
+	Field{
+		Designation: "password",
+		Name:        "password",
+		Value:       "rootpassword",
+		Type:        "P",
 	},
 }
 
+var sections = []Sections{}
+
+var details = Details{
+	Fields:   fields,
+	Sections: sections,
+}
+
+var expectedItem = parsedItem{
+	UUID:      "test-item",
+	CreatedAt: "2019-05-18T14:58:54Z",
+	Details:   details,
+}
+
 func TestParseItemResponse(t *testing.T) {
-	actualItemMap, err := parseItemResponse([]byte(mockItemResponse))
+	actualItem, err := parseItemResponse([]byte(mockItemResponse))
 	if assert.Nil(t, err) {
-		assert.Equal(t, expectedItemMap, actualItemMap, "item maps should equal")
+		assert.Equal(t, actualItem, expectedItem, "item should equal")
 	}
 }
 
@@ -146,9 +91,9 @@ func TestGetItem(t *testing.T) {
 		t.Errorf("failed to create Client: %s", err)
 	}
 	assert.Equal(t, "test-session", client.Session)
-	actualItemMap, err := client.GetItem(VaultName("test-vault"), ItemName("test-item"))
+	actualItem, err := client.GetItem(VaultName("test-vault"), ItemName("test-item"))
 	if err != nil {
 		t.Errorf("error getting item: %s", err)
 	}
-	assert.Equal(t, expectedItemMap, actualItemMap)
+	assert.Equal(t, actualItem.UUID, expectedItem.UUID)
 }

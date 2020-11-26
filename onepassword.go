@@ -31,17 +31,28 @@ type Client struct {
 	mutex     *sync.Mutex
 }
 
+type Field struct {
+	Designation string `json:"designation"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+	Type        string `jsone:"type"`
+}
+type Sections struct {
+	Title  string `json:"title"`
+	Fields []struct {
+		Key   string `json:"t"`
+		Value string `json:"v"`
+	}
+}
+type Details struct {
+	Password string     `json:"password"`
+	Fields   []Field    `json:"fields"`
+	Sections []Sections `json:"sections"`
+}
 type parsedItem struct {
-	UUID    string `json:"uuid"`
-	Details struct {
-		Sections []struct {
-			Title  string `json:"title"`
-			Fields []struct {
-				Key   string `json:"t"`
-				Value string `json:"v"`
-			} `json:"fields"`
-		} `json:"sections"`
-	} `json:"details"`
+	UUID      string  `json:"uuid"`
+	CreatedAt string  `json:"createdAt"`
+	Details   Details `json:"details"`
 }
 
 func getArg(key string, value string) string {
@@ -87,12 +98,13 @@ func (op *Client) authenticate() error {
 	return nil
 }
 
-func parseItemResponse(res []byte) (ItemMap, error) {
+func parseItemResponse(res []byte) (parsedItem, error) {
 	im := make(ItemMap)
 	pItem := parsedItem{}
 	if err := json.Unmarshal(res, &pItem); err != nil {
-		return im, err
+		return pItem, err
 	}
+
 	for _, section := range pItem.Details.Sections {
 		fm := make(FieldMap)
 		for _, field := range section.Fields {
@@ -100,7 +112,7 @@ func parseItemResponse(res []byte) (ItemMap, error) {
 		}
 		im[SectionName(section.Title)] = fm
 	}
-	return im, nil
+	return pItem, nil
 }
 
 func NewClient(opPath string, subdomain string, email string, password string, secretKey string) (*Client, error) {
@@ -120,11 +132,11 @@ func NewClient(opPath string, subdomain string, email string, password string, s
 
 // Calls `op get item` command.
 // usage: op get item <item> [--vault=<vault>] [--session=<session>]
-func (op Client) GetItem(vault VaultName, item ItemName) (ItemMap, error) {
+func (op Client) GetItem(vault VaultName, item ItemName) (parsedItem, error) {
 	vaultArg := getArg("vault", string(vault))
 	res, err := op.runCmd("get", "item", string(item), vaultArg)
 	if err != nil {
-		return make(ItemMap), fmt.Errorf("error getting item: %s", err)
+		return parsedItem{}, fmt.Errorf("error getting item: %s", err)
 	}
 	im, err := parseItemResponse(res)
 	if err != nil {
